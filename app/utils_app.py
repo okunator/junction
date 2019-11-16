@@ -6,15 +6,20 @@ import dash_table
 import os
 import numpy as np
 import pandas as pd
+import requests
 import plotly.graph_objs as go
 import plotly.figure_factory as ff
 from textwrap import dedent as d
+from datetime import datetime as dt
+from app import *
 
 ################################################################################
 ################################################################################
 ################## FUNCTION WRAPPERS FOR LAYOUT MANAGEMENT #####################
 ################################################################################
 ################################################################################
+mapbox_access_token = 'pk.eyJ1IjoidGhlcmVhbGhhY2tlciIsImEiOiJjazMwcGE5dmQwMHF2M2NtamZ1MDdveHJpIn0.ELMe25hitkC1JlgNdFeCSg'
+
 def navbar():
     """Create the app navbar with dash bootstrap navbar"""
     return dbc.Navbar([
@@ -35,21 +40,6 @@ def navbar():
         dark=True,
         className='mx-auto navbar-nav navbar-expand-lgpx-12'
     )
-
-
-def nav_menu():
-    """Create the app nav-tab with dash Tabs object"""
-    return html.Div([
-        dcc.Tabs(id="tabs", value='tab-1', children=[
-            dcc.Tab(label='Overview', value='tab-1'),
-            dcc.Tab(label='Sample set summary', value='tab-2'),
-            dcc.Tab(label='Dimensionality reduction', value='tab-3'),
-            dcc.Tab(label='Unsupervised clustering', value='tab-4'),
-            dcc.Tab(label='Populations trees', value='tab-5'),
-        ], colors={"border": "#d1e3ff", "primary": "#1a7ef0", "background": "#d9d9d9"}
-        ),
-        html.Div(id='tabs-content')
-    ])
 
 
 def app_layout():
@@ -93,9 +83,9 @@ def card(id, grid_num=12, comp1=None, comp2=None, comp3=None, comp4=None, comp5=
                         comp11,
                         comp12,
                         comp13
-                    ], className='p-1 card-body', id=id, style={"height": height})
-                ], className='card shadow p-1')
-            ], className='pl-1 pr-1 col-sm-{} col-md-{} col-lg-{}'.format(grid_num, grid_num, grid_num))
+                    ], className='card-body', id=id, style={"height": height})
+                ], className='card shadow')
+            ], className='col-sm-{} col-md-{} col-lg-{}'.format(grid_num, grid_num, grid_num))
 
 
 def column(id, grid_num=12, comp1=None, comp2=None, comp3=None, comp4=None, comp5=None,comp6=None,
@@ -120,115 +110,52 @@ def column(id, grid_num=12, comp1=None, comp2=None, comp3=None, comp4=None, comp
                 ], className='p-1 col-sm-{} col-md-{} col-lg-{}'.format(grid_num, grid_num, grid_num))
 
 
-def info_card(text1=None, text2=None, text3=None, text4=None,
-              colwidth1=3, colwidth2=3, colwidth3=3, colwidth4=3,
-              comp1=None, comp2=None, comp3=None, comp4=None):
-    """A bootstrap card with title and text as content"""
-    return dbc.Card([
-        dbc.CardBody([
-            dbc.Row([
-                dbc.Col([
-                    html.P(text1, className='mb-1'),
-                    comp1
-                ], width=colwidth1, className='px-1'),
-                dbc.Col([
-                    html.P(text2, className='mb-1'),
-                    comp2
-                ], width=colwidth2, className='px-1'),
-                dbc.Col([
-                    html.P(text3, className='mb-1'),
-                    comp3
-                ], width=colwidth3, className='px-1'),
-                dbc.Col([
-                    html.P(text4, className='mb-1'),
-                    comp4
-                ], width=colwidth4, className='px-1')
-            ])
-        ], className='pt-1 pb-1')
-    ], className='text-center')
 ################################################################################
 ################################################################################
 ####################### FUNCTION WRAPPERS FOR WIDGETS ##########################
 ################################################################################
 ################################################################################
 
-def accordion_item(*args, **kwargs):
-    """Creates an item in the accordion"""
+def daq_knob(id, value, margin_left=0, margin_right=0):
+    """DAQ knob"""
     return html.Div([
-        dbc.Card(
-        [
-            html.Div([
-                dbc.CardHeader(
-                    html.H2(
-                        dbc.Button(
-                            "{}".format(kwargs['name']),
-                            color="link",
-                            id="group-{}-toggle".format(kwargs['i']),
-                        )
-                    )
-                ),
-                dbc.Collapse(
-                    dbc.CardBody(
-                        html.Div([
-                            *args
-                        ])
-                    ),
-                    id="collapse-{}".format(kwargs['i']),
-                )
-            ])
-        ]
-    )])
-
-
-def create_accordion(*args, **kwargs):
-    """Creates a collapsible bootstrap accordion"""
-    return html.Div(
-        html.Div([
-            *args
-        ],className="accordion")
-    )
-
-
-def dbc_dropdown(id, options=[{'label':'Dummy', 'value':'Dummy'}],
-                multi=False, pd_top=2.5, pd_bottom=2.5):
-
-    children = [dbc.DropdownMenuItem(d['value'], id="dropdown-{}-item".format(d['value'])) for d in options]
-    dropdown = dbc.DropdownMenu(
-        label="Central values",
-        children=children
-    )
-    return dropdown
-
-
-def dbc_buttongroup(options, size="md", vertical=False):
-    """dash bootstrap components function wrapper for buttongroup"""
-    # First button is set as active
-    buttons=[]
-    for i, d in enumerate(options):
-        if i == 0:
-            buttons.append(dbc.Button(d, id="button-{}".format(d), className="btn active", n_clicks=1))
-        else:
-            buttons.append(dbc.Button(d, id="button-{}".format(d), className="btn"))
-
-    return html.Div([
-        dbc.ButtonGroup(buttons, size=size, vertical=vertical)
-    ])
-
-
-def dash_pre(id, height=40):
-    """html <pre> dash object wrapper"""
-    return html.Div([
-        html.Pre(
+        daq.Knob(
+            label="Time",
             id=id,
-            style={
-                'border':'thin lightgrey solid',
-                'height':height,
-                'padding-top': 15,
-                'padding-left': 30,
-                'padding-right': 30
-            }
-        )
-    ], style={'padding-top':15})
+            max=24,
+            value=1,
+            min=1,
+            scale={'start':1, 'labelInterval': 1, 'interval': 1}
+        ),
+        html.Div(id='knob-output', className='px-3 pt-4')
+    ], className='px-5 pt-4')
+
+
+def datepicker(id):
+    return html.Div([
+        dcc.DatePickerSingle(
+            id=id,
+            min_date_allowed=dt(2019, 8, 5),
+            max_date_allowed=dt(2020, 9, 19),
+            initial_visible_month=dt(2019, 8, 5),
+            date=str(dt(2019, 8, 25, 23, 59, 59))
+        ),
+        html.Div(id='output-container-date-picker-single')
+    ], className='px-5 pt-5 pd-5 mx-3')
+
+
+def range_slider(id, value):
+    return html.Div([
+        dcc.RangeSlider(
+            id=id,
+            marks={i: '{}'.format(i) for i in range(1, 24)},
+            min=1,
+            max=24,
+            value=value
+        ),
+        dash_pre(id='pre', html.Div(id='range-output', className='pt-5 px-7 pd-4'))
+    ], className='px-2 pt-4 pd-4')
+
 
 
 def daq_toggle(id, value, label, margin_left=0, margin_right=0, disabled=False):
@@ -242,12 +169,11 @@ def daq_toggle(id, value, label, margin_left=0, margin_right=0, disabled=False):
             label=label,
             disabled=disabled,
             style={
-                'padding':5,
-                'margin-left':margin_left,
-                'margin-right':margin_right
+                'padding':5
             }
         )
-    ])
+    ], className='pt-4 px-5')
+
 
 def dash_dropdown(id, value, options=[{'label':'Dummy', 'value':'Dummy'}],
                   multi=False, pd_top=2.5, pd_bottom=2.5, pd_right=30, pd_left=30):
@@ -265,7 +191,8 @@ def dash_dropdown(id, value, options=[{'label':'Dummy', 'value':'Dummy'}],
             'padding-bottom':pd_bottom,
             'padding-left': pd_left,
             'padding-right': pd_right
-        }
+        },
+        className='pt-4'
     )
 
 
@@ -287,94 +214,20 @@ def dash_radiobuttons(id, value, options=[{'label': 'Dummy', 'value': 'Dummy'}])
     )
 
 
-def dash_table_wrap(id, row_select=False, df=None):
-    """Dash data table object wrapper"""
-    if df is not None:
-        return dash_table.DataTable(
+def dash_pre(id, height=40):
+    """html <pre> dash object wrapper"""
+    return html.Div([
+        html.Pre(
             id=id,
-            data=df.to_dict("rows"),
-            columns=[{"name": i, "id": i} for i in df.columns],
-
-            style_header={
-                'backgroundColor': 'rgb(30, 30, 30)',
-                'fontWeight': 'bold',
-                'color': 'white',
-                'textAlign': 'left'
-            },
-            style_cell={
-                'color': 'rgb(70, 70, 70)',
-                'textAlign': 'left',
-                'padding':'8px'
-            },
-
-            fixed_rows={'headers': True, 'data': 0},
-
-            style_table={
-                'overflowY': 'scroll'
+            style={
+                'border':'thin lightgrey solid',
+                'height':height,
+                'padding-top': 15,
+                'padding-left': 30,
+                'padding-right': 30
             }
         )
-    else:
-        return dash_table.DataTable(
-            id=id,
-            data=pd.DataFrame().to_dict('rows'),
-
-            style_header={
-                'fontWeight': 'bold',
-                'textAlign': 'left',
-                'padding':'8px'
-            },
-            style_cell={
-                'color': 'rgb(70, 70, 70)',
-                'textAlign': 'left',
-                'padding':'8px',
-                'minWidth':'115px'
-            },
-
-            fixed_rows={'headers': True, 'data': 0},
-
-            style_table={
-                'overflowY': 'scroll',
-                'overflowX': 'scroll'
-            }
-        )
-
-################################################################################
-################################################################################
-######## FUNCTION WRAPPERS FOR DASH TABLE OBJS AND PLOTLY GRAPH OBJS ###########
-################################################################################
-################################################################################
-
-def dash_table_paginate(id, height, width, row_select=False, data=[], columns=[]):
-    """Dash data table object wrapper"""
-    return dash_table.DataTable(
-        id=id,
-        data=data,
-        columns=columns,
-
-        style_header={
-            'backgroundColor': 'rgb(30, 30, 30)',
-            'fontWeight': 'bold',
-            'color': 'white',
-            'textAlign': 'left'
-        },
-        style_cell={
-            'color': 'rgb(70, 70, 70)',
-            'textAlign': 'left',
-            'minWidth': '140px', 'maxWidth': '280px',
-            'padding':'8px'
-        },
-
-        fixed_rows={'headers': True, 'data': 0},
-
-        style_table={
-            'overflowY':'scroll',
-            'overflowX':'scroll'
-        },
-
-        page_current=0,
-        page_size=8,
-        page_action='native'
-    )
+    ], style={'padding-top':15})
 
 
 def dash_graph(id, figure=None, height=None, scrollZoom=False, loading=False, loading_num=0):
@@ -471,3 +324,45 @@ def dash_markdown(text):
 
 def dash_store(id, storage_type='memory'):
     return dcc.Store(id, storage_type)
+
+
+def scatterMap(longitudes=None, latitudes=None, lineLon=None, lineLat=None, linename=None):
+    data = []
+    for i, (lon, lat) in enumerate(list(zip(longitudes, latitudes))):
+        data.append(go.Scattermapbox(
+            lat=[lat],
+            lon=[lon],
+            mode='markers',
+            name=metadata['description'][i],
+            hovertext=['{}<br>{}'.format(metadata['description'][i], metadata['address'][i])],
+            hoverinfo='lon+lat+text',
+            marker=dict(size=12)
+        ))
+
+    line = go.Scattermapbox(
+        lat=lineLat,
+        lon=lineLon,
+        mode='markers+lines',
+        hovertext=linename,
+        name=linename,
+        hoverinfo='text'
+    )
+    data.append(line)
+
+    fig = go.Figure(data)
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=0, b=0),
+        hovermode='closest',
+        mapbox=go.layout.Mapbox(
+            accesstoken=mapbox_access_token,
+            bearing=0,
+            center=go.layout.mapbox.Center(
+                lon=24.9442,
+                lat=60.16531
+            ),
+            pitch=0,
+            zoom=12,
+        ),
+    )
+    fig.update_layout(mapbox_style='dark')
+    return fig
