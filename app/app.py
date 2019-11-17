@@ -6,4 +6,5 @@ import feather
 ##################################################
 df = feather.read_dataframe('ninetoten.feather')
 metadata = feather.read_dataframe('metadata.feather')
-print(df)
+lons = pd.unique(metadata['longitude'])
+lats = pd.unique(metadata['latitude'])

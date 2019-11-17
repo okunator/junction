@@ -27,7 +27,8 @@ def navbar():
                 # Use row and col to control vertical alignment of logo / brand
                 dbc.Row(
                     [
-                        dbc.Col(dbc.NavbarBrand("Flow app", className="ml-2"))
+                        # dbc.Col(html.Img(src='~/junc/junction/app/logofj.png', height="30px")),
+                        dbc.Col(dbc.NavbarBrand("Flow Job", className="ml-2"))
                     ],
                     align="center",
                     no_gutters=True
@@ -153,7 +154,7 @@ def range_slider(id, value):
             max=24,
             value=value
         ),
-        dash_pre(id='pre', html.Div(id='range-output', className='pt-5 px-7 pd-4'))
+        html.Div(id='range-output', className='pt-5 px-7 pd-4')
     ], className='px-2 pt-4 pd-4')
 
 
@@ -240,7 +241,7 @@ def dash_graph(id, figure=None, height=None, scrollZoom=False, loading=False, lo
             config={'displaylogo':False, 'scrollZoom':scrollZoom, 'autosizable':True}
         )
     elif loading and loading_num != 0:
-        return dcc.Loading(
+        return html.Div(dcc.Loading(
             id="loading-{}".format(loading_num),
             children=[
                 dcc.Graph(
@@ -280,7 +281,7 @@ def dash_graph(id, figure=None, height=None, scrollZoom=False, loading=False, lo
                 'display':'flex',
                 'align-items':'center'
             }
-        )
+        ), className='pt-5')
     else:
         return dcc.Graph(
             id=id,
@@ -326,6 +327,31 @@ def dash_store(id, storage_type='memory'):
     return dcc.Store(id, storage_type)
 
 
+def drag_drop(id):
+    return html.Div([
+        dcc.Upload(
+            id='upload-data',
+            children=html.Div([
+                'Drag and Drop or ',
+                html.A('Select Files')
+            ]),
+            style={
+                'width': '100%',
+                'height': '60px',
+                'lineHeight': '60px',
+                'borderWidth': '1px',
+                'borderStyle': 'dashed',
+                'borderRadius': '5px',
+                'textAlign': 'center',
+                # 'margin': '10px'
+            },
+            # Allow multiple files to be uploaded
+            multiple=True
+        ),
+        html.Div(id='output-data-upload'),
+    ], className='px-5')
+
+
 def scatterMap(longitudes=None, latitudes=None, lineLon=None, lineLat=None, linename=None):
     data = []
     for i, (lon, lat) in enumerate(list(zip(longitudes, latitudes))):
@@ -365,4 +391,56 @@ def scatterMap(longitudes=None, latitudes=None, lineLon=None, lineLat=None, line
         ),
     )
     fig.update_layout(mapbox_style='dark')
+    return fig
+
+
+def parse_contents(contents, filename, date):
+    content_type, content_string = contents.split(',')
+    decoded = base64.b64decode(content_string)
+    try:
+        if 'csv' in filename:
+            # Assume that the user uploaded a CSV file
+            df = pd.read_csv(
+                io.StringIO(decoded.decode('utf-8')))
+        elif 'xls' in filename:
+            # Assume that the user uploaded an excel file
+            df = pd.read_excel(io.BytesIO(decoded))
+        elif 'feather' in filename:
+            df = feather.read_dataframe(filename)
+
+    except Exception as e:
+        print(e)
+        return html.Div([
+            'There was an error processing this file.'
+        ])
+
+
+def countplot(data=None):
+    # print(data['no'], data['yes'])
+    dataf = []
+    dataf.append(go.Bar(
+        x=['no', 'yes'],
+        y=list(data.iloc[0]),
+        marker=dict(
+            line=dict(
+                color='#000000',
+                width=0.5
+        )),
+        opacity=0.9,
+        hoverinfo='y'
+    ))
+    layout = go.Layout(
+            margin=dict(l=35, r=35, t=35),
+            plot_bgcolor='rgb(255,255,255)',
+            yaxis=dict(
+                showline=True,
+                showgrid=False,
+                gridcolor='#bdbdbd',
+                linecolor='#bdbdbd'
+            ),
+            xaxis=dict(
+                linecolor='#bdbdbd',
+            )
+        )
+    fig = go.Figure(dataf, layout)
     return fig
